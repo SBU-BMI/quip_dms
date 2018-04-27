@@ -1,0 +1,58 @@
+<?php
+
+/**
+ * @file
+ * Contains quip.module.
+ */
+
+use Drupal\Core\Routing\RouteMatchInterface;
+
+/**
+ * Implements hook_help().
+ */
+function quip_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    // Main module help for the quip module.
+    case 'help.page.quip':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('QuIP Module') . '</p>';
+      return $output;
+
+    default:
+  }
+}
+
+/**
+ * Implements hook_theme().
+ */
+function quip_theme() {
+  return array(
+    'openseadragon_link_formatter' => array(
+      'variables' => array('url' => NULL, 'height' => NULL),
+      'template' => 'openseadragonformatter',
+    ),
+  );
+}
+
+function quip_entity_presave(Drupal\Core\Entity\EntityInterface $entity) {
+   \Drupal::logger('quip')->notice($entity->bundle(). " is new --> ".$entity->isNew());
+  if (($entity->bundle() == 'wsi') && ($entity->isNew())) {
+    \Drupal::logger('quip')->notice("new file detection...");
+    foreach ($entity->get('field_wsiimage') as $item) {
+      if ($item->entity) {
+        $uri = $item->entity->getFileUri();
+        $uri = drupal_realpath($uri);
+        $eww = exec('java -cp /www/drupal/QuIP-1.0.jar edu.stonybrook.bmi.quiputils.ImageInfo2 '.$uri,$output,$return);
+        $p = json_decode($eww,true);
+        $entity->set('field_width',$p["field_width"][0]["value"]);
+        $entity->set('field_height',$p["field_height"][0]["value"]);
+        $entity->set('field_md5',$p["field_md5"][0]["value"]);
+      }
+    }
+
+  }
+}
+
+//$dir_uri = file_stream_wrapper_get_instance_by_uri('private://');
+//$dir_uri->realpath();
